@@ -329,7 +329,6 @@ ARMSOCDRI2CopyRegion(DrawablePtr pDraw, RegionPtr pRegion,
 
 	ump_cache_operations_control(UMP_CACHE_OP_START);
 	ump_switch_hw_usage_secure_id(armsoc_bo_name(src->bo), UMP_USED_BY_CPU);
-	ump_cache_operations_control(UMP_CACHE_OP_FINISH);
 
 	pCopyClip = REGION_CREATE(pScreen, NULL, 0);
 	RegionCopy(pCopyClip, pRegion);
@@ -354,6 +353,8 @@ ARMSOCDRI2CopyRegion(DrawablePtr pDraw, RegionPtr pRegion,
 			0, 0, pDraw->width, pDraw->height, 0, 0);
 	FreeScratchPixmapHeader(pScratchPixmap);
 	FreeScratchGC(pGC);
+
+	ump_cache_operations_control(UMP_CACHE_OP_FINISH);
 
 	ump_cache_operations_control(UMP_CACHE_OP_START);
 	ump_switch_hw_usage_secure_id(armsoc_bo_name(src->bo), UMP_USED_BY_MALI);
