@@ -34,6 +34,8 @@
 #include "armsoc_exa.h"
 
 #include "dri2.h"
+#include <ump/ump.h>
+#include <ump/ump_ref_drv.h>
 
 /* any point to support earlier? */
 #if DRI2INFOREC_VERSION < 4
@@ -112,7 +114,13 @@ MigratePixmapToGEM(struct ARMSOCRec *pARMSOC, DrawablePtr pDraw)
     unsigned char *addr;
 
     if (bo) {
+	ump_handle handle;
         DEBUG_MSG("MigratePixmapToGEM %p, already exists = %p\n", pPixmap, bo);
+
+	handle = ump_handle_create_from_secure_id(armsoc_bo_name(bo));
+	ump_cpu_msync_now(handle, UMP_MSYNC_CLEAN, NULL, 0);
+	ump_reference_release(handle);
+
 	armsoc_bo_reference(bo);
         return bo;
     }
@@ -242,6 +250,10 @@ ARMSOCDRI2CreateBuffer(DrawablePtr pDraw, unsigned int attachment,
 	DRIBUF(buf)->pitch = armsoc_bo_pitch(bo);
 	buf->bo = bo;
 
+	ump_cache_operations_control(UMP_CACHE_OP_START);
+	ump_switch_hw_usage_secure_id(DRIBUF(buf)->name, UMP_USED_BY_MALI);
+	ump_cache_operations_control(UMP_CACHE_OP_FINISH);
+
 	if (canflip(pDraw) && attachment != DRI2BufferFrontLeft) {
 		/* Create an fb around this buffer. This will fail and we will
 		 * fall back to blitting if the display controller hardware
@@ -315,6 +327,10 @@ ARMSOCDRI2CopyRegion(DrawablePtr pDraw, RegionPtr pRegion,
 	if (!pGC)
 		return;
 
+	ump_cache_operations_control(UMP_CACHE_OP_START);
+	ump_switch_hw_usage_secure_id(armsoc_bo_name(src->bo), UMP_USED_BY_CPU);
+	ump_cache_operations_control(UMP_CACHE_OP_FINISH);
+
 	pCopyClip = REGION_CREATE(pScreen, NULL, 0);
 	RegionCopy(pCopyClip, pRegion);
 	(*pGC->funcs->ChangeClip) (pGC, CT_REGION, pCopyClip, 0);
@@ -338,6 +354,10 @@ ARMSOCDRI2CopyRegion(DrawablePtr pDraw, RegionPtr pRegion,
 			0, 0, pDraw->width, pDraw->height, 0, 0);
 	FreeScratchPixmapHeader(pScratchPixmap);
 	FreeScratchGC(pGC);
+
+	ump_cache_operations_control(UMP_CACHE_OP_START);
+	ump_switch_hw_usage_secure_id(armsoc_bo_name(src->bo), UMP_USED_BY_MALI);
+	ump_cache_operations_control(UMP_CACHE_OP_FINISH);
 }
 
 /**
