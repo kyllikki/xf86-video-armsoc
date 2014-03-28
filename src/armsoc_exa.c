@@ -32,6 +32,8 @@
 
 #include "armsoc_exa.h"
 #include "armsoc_driver.h"
+#include <ump/ump.h>
+#include <ump/ump_ref_drv.h>
 
 /* keep this here, instead of static-inline so submodule doesn't
  * need to know layout of ARMSOCRec.
@@ -334,6 +336,9 @@ ARMSOCPrepareAccess(PixmapPtr pPixmap, int index)
 		return FALSE;
 	}
 
+	ump_cache_operations_control(UMP_CACHE_OP_START);
+	ump_switch_hw_usage_secure_id(armsoc_bo_name(priv->bo), UMP_USED_BY_CPU);
+
 	return TRUE;
 }
 
@@ -351,6 +356,8 @@ _X_EXPORT void
 ARMSOCFinishAccess(PixmapPtr pPixmap, int index)
 {
 	struct ARMSOCPixmapPrivRec *priv = exaGetPixmapDriverPrivate(pPixmap);
+
+	ump_cache_operations_control(UMP_CACHE_OP_FINISH);
 
 	pPixmap->devPrivate.ptr = NULL;
 
