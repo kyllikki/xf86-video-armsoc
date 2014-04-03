@@ -274,6 +274,18 @@ ARMSOCDRI2CreateBuffer(DrawablePtr pDraw, unsigned int attachment,
 	return DRIBUF(buf);
 }
 
+static int delaydestroy(OsTimerPtr otp, CARD32 c32, void *d)
+{
+       struct ARMSOCDRI2BufferRec *buf = d;
+       struct armsoc_bo *bo;
+
+       bo = buf->bo;
+       armsoc_bo_unreference(bo);
+       free(buf);
+
+       return 0;
+}
+
 /**
  * Destroy Buffer
  */
@@ -295,8 +307,7 @@ ARMSOCDRI2DestroyBuffer(DrawablePtr pDraw, DRI2BufferPtr buffer)
 		armsoc_bo_get_backup(bo, &pPixmap->devKind, &pPixmap->devPrivate.ptr);
 	}
 
-	armsoc_bo_unreference(bo);
-	free(buf);
+        TimerSet(NULL, 0, 50, (OsTimerCallback)delaydestroy, buf);
 }
 
 static void
